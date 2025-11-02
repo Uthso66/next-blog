@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-let commentsData: Record<string, string[]> = {};
+const commentsData: Record<string, string[]> = {};
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
