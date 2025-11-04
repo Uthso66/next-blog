@@ -4,28 +4,37 @@ import { prisma } from "@/lib/prisma";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const slug = searchParams.get("slug");
-  if (!slug) return NextResponse.json({ comments:[]});
+  if (!slug) return NextResponse.json({ comments: [] });
 
-  const comments = await prisma.comment.findMany({
-    where: { slug: slug ?? undefined },
-    orderBy: {createdAt: "desc"},
+  // Find the Post first
+  const post = await prisma.post.findUnique({
+    where: { slug },
+    include: { comments: { orderBy: { createdAt: "desc" } } },
   });
-  return NextResponse.json({ comments });
+
+  if (!post) return NextResponse.json({ comments: [] });
+
+  return NextResponse.json({ comments: post.comments });
 }
 
 export async function POST(request: Request) {
   const { slug, comment } = await request.json();
-
-  if (!slug || !comment) {
+  if (!slug || !comment)
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
-  }
 
-  await prisma.comment.create({data: {slug, content: comment}});
+  // Find the Post first
+  const post = await prisma.post.findUnique({ where: { slug } });
+  if (!post)
+    return NextResponse.json({ error: "Post not found" }, { status: 404 });
 
-  const comments = await prisma.comment.findMany({
-    where: { slug },
-    orderBy: { createdAt: "desc"},
+  await prisma.comment.create({
+    data: { content: comment, postId: post.id },
   });
 
-  return NextResponse.json({ success: true, comments });
+  const updatedPost = await prisma.post.findUnique({
+    where: { slug },
+    include: { comments: { orderBy: { createdAt: "desc" } } },
+  });
+
+  return NextResponse.json({ success: true, comments: updatedPost?.comments ?? [] });
 }
