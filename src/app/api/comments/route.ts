@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-const commentsData: Record<string, string[]> = {};
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const slug = searchParams.get("slug");
@@ -28,9 +26,6 @@ export async function POST(request: Request) {
     where: { slug },
     orderBy: { createdAt: "desc"},
   });
- /*
-  if (!commentsData[slug]) commentsData[slug] = [];
-  commentsData[slug].push(comment);
-*/
+
   return NextResponse.json({ success: true, comments });
 }
