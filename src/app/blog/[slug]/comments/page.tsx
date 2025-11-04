@@ -3,54 +3,47 @@
 import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 
+type Comment = {
+  id: number;
+  slug: string;
+  content: string;
+  createdAt: string;
+};
+
 export default function CommentsPage() {
   const { slug } = useParams();
   const displaySlug = Array.isArray(slug) ? slug.join("/") : slug;
 
-  const [comments, setComments] = useState<string[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [input, setInput] = useState("");
-/*
-useEffect(() => {
-    const saved = localStorage.getItem(`comments-${displaySlug}`);
-    if (saved) {
-      setComments(JSON.parse(saved));
-    }
+  const [loading, setLoading] = useState(false);
+
+  // 🔹 Load comments from API
+  useEffect(() => {
+    const loadComments = async () => {
+      const res = await fetch(`/api/comments?slug=${displaySlug}`);
+      const data = await res.json();
+      setComments(data.comments || []);
+    };
+    loadComments();
   }, [displaySlug]);
 
-*/
-    useEffect(() => {
-  const loadComments = async () => {
-    const res = await fetch(`/api/comments?slug=${displaySlug}`);
-    const data = await res.json();
-    setComments(data.comments);
-  };
-  loadComments();
-}, [displaySlug]);
-
-  
-  useEffect(() => {
-    localStorage.setItem(`comments-${displaySlug}`, JSON.stringify(comments));
-  }, [comments, displaySlug]);
-  /*
-  const addComment = () => {
-    if (!input.trim()) return;
-    setComments([...comments, input.trim()]);
-    setInput("");
-  };
-  */
+  // 🔹 Add a new comment
   const addComment = async () => {
-  if (!input.trim()) return;
+    if (!input.trim()) return;
+    setLoading(true);
 
-  await fetch("/api/comments", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ slug: displaySlug, comment: input }),
-  });
+    const res = await fetch("/api/comments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug: displaySlug, comment: input }),
+    });
 
-  setComments([...comments, input.trim()]);
-  setInput("");
-};
-
+    const data = await res.json();
+    setComments(data.comments || []);
+    setInput("");
+    setLoading(false);
+  };
 
   return (
     <div className="p-8">
@@ -67,15 +60,27 @@ useEffect(() => {
         />
         <button
           onClick={addComment}
-          className="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700 transition"
+          disabled={loading}
+          className={`bg-blue-600 px-4 py-2 rounded hover:bg-blue-700 transition ${
+            loading ? "opacity-50 cursor-not-allowed" : ""
+          }`}
         >
-          Add Comment
+          {loading ? "Adding..." : "Add Comment"}
         </button>
 
         <ul className="mt-4 space-y-2">
-          {comments.map((c, i) => (
-            <li key={i} className="bg-gray-800 p-2 rounded">{c}</li>
-          ))}
+          {comments.length === 0 ? (
+            <li className="text-gray-400 italic">No comments yet</li>
+          ) : (
+            comments.map((c) => (
+              <li key={c.id} className="bg-gray-800 p-2 rounded">
+                <p className="text-white">{c.content}</p>
+                <p className="text-xs text-gray-500">
+                  {new Date(c.createdAt).toLocaleString()}
+                </p>
+              </li>
+            ))
+          )}
         </ul>
       </div>
     </div>

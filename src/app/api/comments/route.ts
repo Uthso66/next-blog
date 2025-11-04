@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 const commentsData: Record<string, string[]> = {};
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const slug = searchParams.get("slug");
-  return NextResponse.json({ comments: commentsData[slug || ""] || [] });
+  if (!slug) return NextResponse.json({ comments:[]});
+
+  const comments = await prisma.comment.findMany({
+    where: {slug},
+    orderBy: {createdAt: "desc"},
+  });
+  return NextResponse.json({ comments });
 }
 
 export async function POST(request: Request) {
@@ -15,8 +22,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 
+  await prisma.comment.create({data: {slug, content: comment}});
+
+  const comments = await prisma.comment.findMany({
+    where: { slug },
+    orderBy: { createdAt: "desc"},
+  });
+ /*
   if (!commentsData[slug]) commentsData[slug] = [];
   commentsData[slug].push(comment);
-
-  return NextResponse.json({ success: true, comments: commentsData[slug] });
+*/
+  return NextResponse.json({ success: true, comments });
 }
